@@ -68,7 +68,7 @@ def get_colors():
 # Always call get_colors() dynamically
 
 
-def economist_chart_style(fig, title="", height=400):
+def economist_chart_style(fig, title="", height=500):
     """
     Apply Economist magazine styling to Plotly charts.
     Automatically adapts to light/dark theme.
@@ -95,11 +95,11 @@ def economist_chart_style(fig, title="", height=400):
         paper_bgcolor=colors['background'],
         plot_bgcolor=colors['plot_bg'],
         height=height,
-        margin=dict(l=10, r=10, t=50, b=90),  # Extra bottom space for legend
+        margin=dict(l=50, r=10, t=30, b=120),  # Optimized: left margin for y-axis label, reduced top
         legend=dict(
             orientation="h",
             yanchor="top",
-            y=-0.20,  # Below chart
+            y=-0.25,  # Further below chart to avoid x-axis label
             xanchor="center",
             x=0.5,
             bgcolor=colors['legend_bg'],
@@ -118,7 +118,8 @@ def economist_chart_style(fig, title="", height=400):
         linewidth=2,
         linecolor=colors['text'],
         mirror=False,
-        title_font=dict(size=11, color=colors['text'])
+        title_font=dict(size=11, color=colors['text']),
+        title_standoff=15  # Extra space between axis and title
     )
     
     fig.update_yaxes(

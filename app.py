@@ -706,7 +706,7 @@ with tab1:
                                     line=dict(width=0), name='95% uncertainty', hoverinfo='skip'))
         
         # Apply Economist styling
-        fig_ca = economist_chart_style(fig_ca, height=350)
+        fig_ca = economist_chart_style(fig_ca, height=500)
         fig_ca.update_xaxes(title_text="Time (seconds)")
         fig_ca.update_yaxes(title_text="Concentration (mol/L)")
         
@@ -758,7 +758,7 @@ with tab1:
                                    name='Coolant input', line=dict(color=COLORS['coolant'], width=1.8, dash='dot')))
         
         # Apply Economist styling
-        fig_t = economist_chart_style(fig_t, height=350)
+        fig_t = economist_chart_style(fig_t, height=500)
         fig_t.update_xaxes(title_text="Time (seconds)")
         fig_t.update_yaxes(title_text="Temperature (K)")
         
@@ -774,7 +774,7 @@ with tab2:
                                    line=dict(color='green', width=2)))
         if coolant_profile == "Step Change":
             fig_k.add_vline(x=tc_step_time, line_dash="dot", line_color="gray")
-        fig_k = economist_chart_style(fig_k, height=350)
+        fig_k = economist_chart_style(fig_k, height=500)
         fig_k.update_xaxes(title_text="Time (s)")
         fig_k.update_yaxes(title_text="K_Ca")
         st.plotly_chart(fig_k, width='stretch')
@@ -787,7 +787,7 @@ with tab2:
                                    line=dict(color='purple', width=2)))
         if coolant_profile == "Step Change":
             fig_p.add_vline(x=tc_step_time, line_dash="dot", line_color="gray")
-        fig_p = economist_chart_style(fig_p, height=350)
+        fig_p = economist_chart_style(fig_p, height=500)
         fig_p.update_xaxes(title_text="Time (s)")
         fig_p.update_yaxes(title_text="P₁₂")
         st.plotly_chart(fig_p, width='stretch')
@@ -803,7 +803,7 @@ with tab3:
                                       name='k (1/min)', line=dict(color='orange', width=2)))
         if coolant_profile == "Step Change":
             fig_rate.add_vline(x=tc_step_time, line_dash="dot", line_color="gray")
-        fig_rate = economist_chart_style(fig_rate, height=350)
+        fig_rate = economist_chart_style(fig_rate, height=500)
         fig_rate.update_xaxes(title_text="Time (s)")
         fig_rate.update_yaxes(title_text="k (1/min)")
         st.plotly_chart(fig_rate, width='stretch')
@@ -825,9 +825,9 @@ with tab3:
         fig_heat.add_hline(y=0, line_dash="dot", line_color="gray")
         if coolant_profile == "Step Change":
             fig_heat.add_vline(x=tc_step_time, line_dash="dot", line_color="gray")
-        fig_heat = economist_chart_style(fig_heat, height=350)
+        fig_heat = economist_chart_style(fig_heat, height=500)
         fig_heat.update_layout(
-            margin=dict(l=0, r=130, t=30, b=0),
+            margin=dict(l=50, r=130, t=30, b=120),  # Left for y-axis, right for legend, bottom for x-axis
             legend=dict(
                 orientation="v",
                 yanchor="top", y=1.0,
