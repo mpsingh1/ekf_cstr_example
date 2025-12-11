@@ -17,78 +17,65 @@ This project demonstrates state estimation using an Extended Kalman Filter on a 
   - EKF internals (Kalman gain, covariance)
   - Reaction dynamics (reaction rate, heat balance)
 
-## Files
+## Project Structure
 
-- `app.py` - Main Streamlit application with interactive simulator
-- `state_space_kinetics.py` - Standalone EKF simulation script with matplotlib
-- `ekf_tutorial.py` - Tutorial with conceptual demonstrations
-- `pages/1_EKF_Math.py` - Detailed mathematical explanations
-- `pages/2_Glossary.py` - Complete glossary of terms
-- `pages/3_CSTR_Diagram.py` - System diagram and balance equations
+```
+state_space/
+├── app.py                    # Main Streamlit application
+├── models/                   # Dynamical system models
+│   ├── __init__.py
+│   └── cstr.py              # CSTR reactor model
+├── filters/                  # State estimation algorithms
+│   ├── __init__.py
+│   └── ekf.py               # Extended Kalman Filter
+├── utils/                    # Utility functions
+│   ├── __init__.py
+│   ├── coolant_profiles.py  # Disturbance generators
+│   └── plotting.py          # Chart styling
+├── pages/                    # Streamlit pages
+│   ├── 1_EKF_Math.py
+│   ├── 2_Glossary.py
+│   └── 3_CSTR_Diagram.py
+├── requirements.txt         # Python dependencies
+└── README.md
+```
+
+## Architecture
+
+The project is designed for scalability and extensibility:
+
+### Models (`models/`)
+Add new dynamical systems (e.g., pendulum, vehicle) by implementing:
+- `dynamics(t, x, u)` - State derivatives
+- `jacobian(x, u, dt)` - Linearization for EKF
+- `get_state_names()` - For plotting
+- `get_state_units()` - For axis labels
+
+### Filters (`filters/`)
+The EKF is model-agnostic and can work with any model following the interface above. You can add other estimators like UKF or Particle Filters.
+
+### Utils (`utils/`)
+Reusable components:
+- **Coolant Profiles**: Various disturbance scenarios (step, sinusoidal, random walk, etc.)
+- **Plotting**: Economist magazine-inspired chart styling for clean, professional visuals
+
+## Live Demo
+
+https://ekfcstrexample-vczdzrrivhe8wpucqmlnfx.streamlit.app/
 
 ## Installation
 
 ```bash
-pip install streamlit numpy pandas plotly scipy tqdm matplotlib
+pip install -r requirements.txt
 ```
 
-## Usage
+## Running Locally
 
-### Interactive App
 ```bash
 streamlit run app.py
 ```
 
-### Standalone Simulation
-```bash
-python state_space_kinetics.py
-```
-
-### Tutorial
-```bash
-python ekf_tutorial.py
-```
-
-## System Equations
-
-**Material Balance:**
-```
-dCa/dt = (q/V)(Cai - Ca) - kCa
-```
-
-**Energy Balance:**
-```
-dT/dt = (q/V)(Ti - T) + (-ΔH/ρCp)kCa + (UA/VρCp)(Tc - T)
-```
-
-**Arrhenius Rate:**
-```
-k = k0 * exp(-E/RT)
-```
-
-## EKF Algorithm
-
-1. **Predict**: Propagate state and uncertainty using physics model
-2. **Update**: Correct prediction using sensor measurements
-3. **Iterate**: Repeat for optimal state estimation
-
-## Tuning Parameters
-
-- **Q (Process Noise)**: Model uncertainty - higher values trust measurements more
-- **R (Measurement Noise)**: Sensor uncertainty - higher values trust model more
-- **P0 (Initial Covariance)**: Initial uncertainty - affects convergence speed
-
-## Key Insights
-
-- The EKF can estimate unmeasured states (concentration) from measured states (temperature)
-- Cross-covariance P12 captures the coupling between concentration and temperature
-- Kalman gain adaptively balances trust between model predictions and sensor measurements
-
-## License
-
-MIT
-
 ## Author
-Manjot Pal Singh
-Created for educational purposes to demonstrate Extended Kalman Filtering.
 
+Manjot Singh  
+Email: smanjotpal@gmail.com

@@ -3,7 +3,14 @@ import streamlit as st
 st.set_page_config(page_title="EKF Mathematics", layout="wide")
 
 st.title("Extended Kalman Filter Mathematics")
-st.markdown("This page explains the math behind the EKF implementation in the simulator.")
+st.markdown("""
+This page explains the mathematical foundation of the EKF implementation.
+
+**Primary References:**
+1. Welch, G., & Bishop, G. (2006). *An Introduction to the Kalman Filter*. Technical Report TR 95-041, University of North Carolina.
+2. Simon, D. (2006). *Optimal State Estimation: Kalman, H∞, and Nonlinear Approaches*. Wiley-Interscience.
+3. Jazwinski, A. H. (1970). *Stochastic Processes and Filtering Theory*. Academic Press.
+""")
 
 # ===========================================
 # 1. STATE SPACE MODEL
@@ -59,7 +66,22 @@ with col4:
 
 st.markdown("### Discretization")
 st.latex(r"\mathbf{F} = \mathbf{I} + \mathbf{A} \cdot \Delta t")
-st.caption("First-order Euler approximation of the matrix exponential")
+st.caption("First-order Euler approximation of the matrix exponential exp(A·Δt)")
+
+st.markdown("### Jacobian Derivation")
+st.markdown("""
+Given the CSTR dynamics:
+- $f_1 = \\frac{q}{V}(C_{Ai} - C_A) - kC_A$
+- $f_2 = \\frac{q}{V}(T_i - T) + \\frac{(-\\Delta H)}{\\rho C_p}kC_A + \\frac{UA}{V\\rho C_p}(T_c - T)$
+
+Where $k = k_0 e^{-E/(RT)}$, we have:
+""")
+
+st.latex(r"\frac{\partial k}{\partial T} = k \cdot \frac{E}{RT^2}")
+
+st.markdown("Therefore:")
+st.latex(r"\frac{\partial f_1}{\partial C_A} = -\frac{q}{V} - k, \quad \frac{\partial f_1}{\partial T} = -C_A \frac{\partial k}{\partial T} = -C_A k \frac{E}{RT^2}")
+st.latex(r"\frac{\partial f_2}{\partial C_A} = \frac{(-\Delta H)}{\rho C_p}k, \quad \frac{\partial f_2}{\partial T} = -\frac{q}{V} + \frac{(-\Delta H)}{\rho C_p}C_A\frac{\partial k}{\partial T} - \frac{UA}{V\rho C_p}")
 
 st.divider()
 
@@ -96,10 +118,14 @@ with col6:
     st.markdown("**State Update:**")
     st.latex(r"\hat{\mathbf{x}}_{k|k} = \hat{\mathbf{x}}_{k|k-1} + \mathbf{K}_k \mathbf{r}_k")
     
-    st.markdown("**Covariance Update:**")
-    st.latex(r"\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k\mathbf{H})\mathbf{P}_{k|k-1}")
+    st.markdown("**Covariance Update (Joseph Form):**")
+    st.latex(r"\mathbf{P}_{k|k} = (\mathbf{I} - \mathbf{K}_k\mathbf{H})\mathbf{P}_{k|k-1}(\mathbf{I} - \mathbf{K}_k\mathbf{H})^T + \mathbf{K}_k\mathbf{R}\mathbf{K}_k^T")
     
-    st.success("Corrects prediction using sensor measurement.")
+    st.info("""
+    **Note on Joseph Form:** The standard form is $\\mathbf{P} = (\\mathbf{I} - \\mathbf{K}\\mathbf{H})\\mathbf{P}_{pred}$, 
+    but the Joseph form (shown above) is preferred for numerical stability. It guarantees positive-definiteness 
+    of $\\mathbf{P}$ even with rounding errors (Bucy & Joseph, 1968; Simon, 2006, Section 5.3).
+    """)
 
 st.divider()
 
@@ -185,20 +211,41 @@ with col12:
     st.markdown("### $\mathbf{K} \\to 0$")
     st.latex(r"\hat{\mathbf{x}} \approx \hat{\mathbf{x}}_{\text{pred}}")
     st.warning("**Trust the MODEL** (ignore sensor)")
-    st.markdown("Happens when: $\mathbf{R}$ large or $\mathbf{Q}$ small")
+    st.markdown("""
+    **All states** follow model prediction.
+    
+    Happens when: $\mathbf{R}$ large or $\mathbf{Q}$ small
+    """)
 
 with col13:
-    st.markdown("### $\mathbf{K} \\to 1$")
-    st.latex(r"\hat{\mathbf{x}} \approx \mathbf{y}")
+    st.markdown("### $\mathbf{K} \\to \\mathbf{H}^+$ (pseudoinverse)")
+    st.latex(r"\hat{\mathbf{x}}_{\text{measured}} \approx \mathbf{y}")
     st.success("**Trust the SENSOR** (ignore model)")
-    st.markdown("Happens when: $\mathbf{R}$ small or $\mathbf{Q}$ large")
+    st.markdown("""
+    **Measured states** follow sensor directly.
+    
+    **Unmeasured states** still depend on model + cross-covariance.
+    
+    Happens when: $\mathbf{R}$ small or $\mathbf{Q}$ large
+    """)
+
+st.info("""
+**Important for Partial Measurements:**
+
+When measuring only **some** states (e.g., only Temperature in CSTR):
+- $\\mathbf{K}$ is a 2×1 vector: $\\mathbf{K} = [K_{C_A}, K_T]^T$
+- $K_T$ controls how much temperature measurement affects the temperature estimate
+- $K_{C_A}$ controls how much temperature measurement affects the **unmeasured** concentration estimate
+- The unmeasured state (Ca) is inferred through **cross-covariance** $P_{12}$, not direct measurement
+- You can **never** fully "trust the sensor" for unmeasured states - you're always relying on the model's correlation structure
+""")
 
 st.divider()
 
 # ===========================================
-# 7. CROSS-COVARIANCE
+# 7. CROSS-COVARIANCE AND UNMEASURED STATES
 # ===========================================
-st.header("7. Cross-Covariance $P_{12}$")
+st.header("7. Cross-Covariance and Unmeasured States")
 
 st.markdown("""
 The off-diagonal element $P_{12}$ of the covariance matrix captures the **correlation** between state estimates:
@@ -206,13 +253,121 @@ The off-diagonal element $P_{12}$ of the covariance matrix captures the **correl
 
 st.latex(r"\mathbf{P} = \begin{bmatrix} P_{11} & P_{12} \\ P_{21} & P_{22} \end{bmatrix} = \begin{bmatrix} \text{Var}(C_A) & \text{Cov}(C_A, T) \\ \text{Cov}(T, C_A) & \text{Var}(T) \end{bmatrix}")
 
-st.markdown("""
-**Why it matters:**
-- When $P_{12} < 0$: Temperature and concentration are **negatively correlated**
-- This means: If $T$ increases, $C_A$ likely decreases (exothermic reaction consuming reactant)
-- The EKF uses this coupling to update $C_A$ even when only measuring $T$!
+st.markdown("### How Unmeasured States Are Updated")
 
-This is the **"hidden link"** that allows the filter to estimate unmeasured states.
+st.markdown("""
+When measuring **only temperature** (H = [0, 1]), the Kalman Gain becomes:
+""")
+
+st.latex(r"\mathbf{K} = \begin{bmatrix} K_{C_A} \\ K_T \end{bmatrix} = \mathbf{P}_{pred} \mathbf{H}^T (\mathbf{H} \mathbf{P}_{pred} \mathbf{H}^T + R)^{-1}")
+
+st.markdown("""
+Expanding this for partial measurements:
+""")
+
+st.latex(r"K_{C_A} = \frac{P_{12}}{P_{22} + R_T}, \quad K_T = \frac{P_{22}}{P_{22} + R_T}")
+
+st.markdown("""
+The key insight: **$K_{C_A}$ depends on $P_{12}$**, the cross-covariance!
+
+The state update becomes:
+""")
+
+st.latex(r"\hat{C}_A = \hat{C}_{A,pred} + K_{C_A}(T_{measured} - \hat{T}_{pred})")
+st.latex(r"\hat{T} = \hat{T}_{pred} + K_T(T_{measured} - \hat{T}_{pred})")
+
+st.markdown("""
+**Physical Interpretation for CSTR:**
+- When $P_{12} < 0$: Temperature and concentration are **negatively correlated**
+- Meaning: If temperature increases unexpectedly (positive innovation), concentration likely decreased
+- **Why?** Exothermic reaction: more reaction → consumes reactant (Ca ↓) → releases heat (T ↑)
+- The EKF exploits this coupling to infer unmeasured Ca from measured T
+
+**Bottom Line:** You cannot estimate unmeasured states without:
+1. A good **model** (to predict their evolution)
+2. **Cross-covariance** $P_{12}$ (to link them to measured states)
+3. Sufficient **process noise** Q (to allow the filter to adapt)
+
+This is the **"hidden link"** that allows the filter to estimate unmeasured states - but it's always model-based inference, never direct observation.
+""")
+
+st.divider()
+
+# ===========================================
+# 8. EXAMPLE: TEMPERATURE-ONLY MEASUREMENT
+# ===========================================
+st.header("8. Example: Temperature-Only Measurement")
+
+st.markdown("""
+Consider a scenario where we **only measure temperature** but want to estimate both Ca and T.
+""")
+
+col14, col15 = st.columns(2)
+
+with col14:
+    st.markdown("### Scenario")
+    st.code("""
+# Predicted state
+Ca_pred = 0.50 mol/L
+T_pred = 360 K
+
+# Covariance (simplified)
+P = [[0.01,  -0.5 ],
+     [-0.5,   25.0]]
+P₁₂ = -0.5 (negative correlation)
+
+# Measurement
+T_measured = 365 K  (5 K higher!)
+R_T = 1.0 K²
+""", language="python")
+
+with col15:
+    st.markdown("### Kalman Gain Calculation")
+    st.latex(r"K_{C_A} = \frac{P_{12}}{P_{22} + R_T} = \frac{-0.5}{25 + 1} \approx -0.019")
+    st.latex(r"K_T = \frac{P_{22}}{P_{22} + R_T} = \frac{25}{25 + 1} \approx 0.96")
+    
+    st.markdown("### State Update")
+    st.latex(r"\text{Innovation} = 365 - 360 = 5 \text{ K}")
+    st.latex(r"\hat{C}_A = 0.50 + (-0.019)(5) = 0.405 \text{ mol/L}")
+    st.latex(r"\hat{T} = 360 + (0.96)(5) = 364.8 \text{ K}")
+
+st.success("""
+**Key Observation:** 
+- Temperature measurement was 5 K **higher** than expected
+- Filter inferred that Ca is **lower** (0.50 → 0.405 mol/L) even though we **didn't measure Ca**!
+- Why? Because P₁₂ < 0 indicates: higher T correlates with lower Ca (exothermic reaction)
+- The magnitude of the Ca adjustment depends on:
+  - How strong the correlation is (|P₁₂|)
+  - How certain we are about T (P₂₂)
+  - How much we trust the sensor (R_T)
+""")
+
+st.divider()
+
+# ===========================================
+# 9. IMPLEMENTATION NOTES
+# ===========================================
+st.header("9. Implementation Notes")
+
+st.markdown("""
+### Numerical Stability
+
+**Covariance Update:** We use the Joseph form rather than the simplified form:
+- **Joseph form (used):** $\\mathbf{P} = (\\mathbf{I} - \\mathbf{K}\\mathbf{H})\\mathbf{P}_{pred}(\\mathbf{I} - \\mathbf{K}\\mathbf{H})^T + \\mathbf{K}\\mathbf{R}\\mathbf{K}^T$
+- **Simplified form:** $\\mathbf{P} = (\\mathbf{I} - \\mathbf{K}\\mathbf{H})\\mathbf{P}_{pred}$
+
+The Joseph form guarantees positive semi-definiteness even with numerical rounding errors.
+
+### Discretization
+
+The continuous Jacobian $\\mathbf{A}$ is discretized using first-order Euler:
+$$\\mathbf{F} = \\mathbf{I} + \\mathbf{A}\\Delta t$$
+
+For small time steps (Δt = 0.1 s), this is accurate. For larger steps, consider matrix exponential: $\\mathbf{F} = e^{\\mathbf{A}\\Delta t}$.
+
+### Linearization Point
+
+The Jacobian is evaluated at the **current estimate** $\\hat{\\mathbf{x}}_{k-1}$, not the prediction. This is standard EKF practice (Simon, 2006, Algorithm 13.1).
 """)
 
 st.divider()
@@ -220,8 +375,21 @@ st.divider()
 st.markdown("""
 ---
 ### References
-1. Welch, G., & Bishop, G. (2006). An Introduction to the Kalman Filter.
-2. Simon, D. (2006). Optimal State Estimation: Kalman, H∞, and Nonlinear Approaches.
-3. Rawlings, J. B., & Mayne, D. Q. (2009). Model Predictive Control: Theory and Design.
+
+1. **Welch, G., & Bishop, G. (2006).** *An Introduction to the Kalman Filter.* Technical Report TR 95-041, University of North Carolina at Chapel Hill. [Available online]
+
+2. **Simon, D. (2006).** *Optimal State Estimation: Kalman, H∞, and Nonlinear Approaches.* Wiley-Interscience. ISBN: 978-0-471-70858-2.
+
+3. **Jazwinski, A. H. (1970).** *Stochastic Processes and Filtering Theory.* Academic Press.
+
+4. **Bucy, R. S., & Joseph, P. D. (1968).** *Filtering for Stochastic Processes with Applications to Guidance.* Interscience Publishers.
+
+5. **Rawlings, J. B., & Mayne, D. Q. (2009).** *Model Predictive Control: Theory and Design.* Nob Hill Publishing.
+
+### Verification
+
+The implementation follows the standard EKF algorithm as presented in:
+- Simon (2006), Algorithm 13.1 (Extended Kalman Filter)
+- Welch & Bishop (2006), Section 3.3 (The Discrete Extended Kalman Filter)
 """)
 
