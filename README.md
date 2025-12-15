@@ -61,7 +61,7 @@ Reusable components:
 
 ## Live Demo
 
-https://ekfcstrexample-vczdzrrivhe8wpucqmlnfx.streamlit.app/
+https://ekf-cstr-demo.streamlit.app/
 
 ## Installation
 
