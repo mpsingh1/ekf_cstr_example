@@ -549,23 +549,68 @@ ekf = ExtendedKalmanFilter(
     x0=np.array([Ca_est_init, T_est_init])
 )
 
-# Run Simulation
-for k in range(steps):
+# Initial measurement at k=0 (no prediction yet)
+if meas_mode == "Both Ca and T":
+    y_meas_0 = np.array([
+        x_true[0] + np.random.normal(0, np.sqrt(R_true_Ca)),
+        x_true[1] + np.random.normal(0, np.sqrt(R_true_T))
+    ])
+else:
+    y_meas_0 = np.array([x_true[1] + np.random.normal(0, np.sqrt(R_true_T))])
+
+x_est_0 = ekf.update_only(y_meas_0)
+P_0 = ekf.get_covariance()
+K_0 = ekf.get_kalman_gain()
+
+T_curr_0 = max(273.0, x_true[1])
+Ca_curr_0 = max(0.0, x_true[0])
+k_rate_0 = k0 * np.exp(-E / (R_gas * T_curr_0))
+r_molar_0 = k_rate_0 * Ca_curr_0
+Tc_0 = Tc_profile[0]
+Q_flow_0 = (q / V) * (Ti - T_curr_0)
+Q_rxn_0 = r_molar_0 * (-dH) / (rho * Cp)
+Q_cool_0 = (UA / (V * rho * Cp)) * (Tc_0 - T_curr_0)
+
+history['t'].append(0.0)
+history['Tc'].append(Tc_0)
+history['Ca_true'].append(x_true[0])
+history['T_true'].append(x_true[1])
+if meas_mode == "Both Ca and T":
+    history['Ca_meas'].append(y_meas_0[0])
+    history['T_meas'].append(y_meas_0[1])
+else:
+    history['Ca_meas'].append(np.nan)
+    history['T_meas'].append(y_meas_0[0])
+if show_pure_model:
+    history['Ca_model'].append(x_model[0])
+    history['T_model'].append(x_model[1])
+history['Ca_est'].append(x_est_0[0])
+history['T_est'].append(x_est_0[1])
+history['K_Ca'].append(K_0[0, 0])
+history['P_Ca'].append(P_0[0, 0])
+history['P_T'].append(P_0[1, 1])
+history['P_12'].append(P_0[0, 1])
+history['k_rate'].append(k_rate_0)
+history['Q_flow'].append(Q_flow_0)
+history['Q_rxn'].append(Q_rxn_0)
+history['Q_cool'].append(Q_cool_0)
+
+# Run Simulation for k >= 1 using u_{k-1} over [t_{k-1}, t_k]
+for k in range(1, steps):
     t = k * dt
-    
-    # Coolant temperature from profile
-    Tc = Tc_profile[k]
+
+    Tc_prev = Tc_profile[k - 1]
     
     # A. PURE MODEL (no noise reference) - OPTIONAL
     if show_pure_model:
-        sol_model = solve_ivp(lambda t, x: cstr_model.dynamics(t, x, Tc), [0, dt], x_model, 
+        sol_model = solve_ivp(lambda t, x: cstr_model.dynamics(t, x, Tc_prev), [0, dt], x_model,
                               method='RK45', rtol=1e-6, atol=1e-8)
         x_model = sol_model.y[:, -1]
         x_model[0] = max(0.0, x_model[0])
         x_model[1] = max(273.0, x_model[1])
     
     # B. TRUE SYSTEM (with TRUE process noise - physical reality)
-    sol_true = solve_ivp(lambda t, x: cstr_model.dynamics(t, x, Tc), [0, dt], x_true,
+    sol_true = solve_ivp(lambda t, x: cstr_model.dynamics(t, x, Tc_prev), [0, dt], x_true,
                          method='RK45', rtol=1e-6, atol=1e-8)
     x_true = sol_true.y[:, -1]
     x_true = x_true + np.random.multivariate_normal([0, 0], Q_true)  # Use Q_true!
@@ -584,7 +629,7 @@ for k in range(steps):
     # D. EKF PREDICT + UPDATE (using modular EKF class)
     # Reference: Welch & Bishop (2006) "An Introduction to the Kalman Filter"
     # Reference: Dan Simon (2006) "Optimal State Estimation"
-    x_est = ekf.step(y_meas, Tc, dt)
+    x_est = ekf.step(y_meas, Tc_prev, dt)
     P = ekf.get_covariance()
     K = ekf.get_kalman_gain()
     
@@ -599,11 +644,11 @@ for k in range(steps):
     # Calculate ALL heat terms (K/min)
     Q_flow = (q / V) * (Ti - T_curr)                 # Heat from flow [K/min]
     Q_rxn = r_molar * (-dH) / (rho * Cp)            # Heat from reaction [K/min]
-    Q_cool = (UA / (V * rho * Cp)) * (Tc - T_curr)  # Heat from cooling [K/min]
+    Q_cool = (UA / (V * rho * Cp)) * (Tc_prev - T_curr)  # Heat from cooling [K/min]
     
     # Store Data
     history['t'].append(t)
-    history['Tc'].append(Tc)
+    history['Tc'].append(Tc_prev)
     history['Ca_true'].append(x_true[0])
     history['T_true'].append(x_true[1])
     

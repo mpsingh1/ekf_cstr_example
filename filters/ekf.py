@@ -163,6 +163,19 @@ class ExtendedKalmanFilter:
         self.P = P_est
         
         return x_est
+
+    def update_only(self, y_meas):
+        """
+        Measurement update without time propagation.
+
+        Useful at k=0 when you have an initial measurement y_0 but no prior
+        control interval to propagate through.
+        """
+        x_est, P_est, K = self.update(self.x, self.P, y_meas)
+        self.x = x_est
+        self.P = P_est
+        self.kalman_gain = K
+        return x_est
     
     def _apply_constraints(self, x):
         """Apply physical constraints to state vector"""

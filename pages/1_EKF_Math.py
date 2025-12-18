@@ -97,7 +97,7 @@ col5, col6 = st.columns(2)
 with col5:
     st.markdown("### Predict Step (Time Update)")
     st.markdown("**State Prediction:**")
-    st.latex(r"\hat{\mathbf{x}}_{k|k-1} = f(\hat{\mathbf{x}}_{k-1|k-1}, \mathbf{u}_k)")
+    st.latex(r"\hat{\mathbf{x}}_{k|k-1} = f(\hat{\mathbf{x}}_{k-1|k-1}, \mathbf{u}_{k-1})")
     
     st.markdown("**Covariance Prediction:**")
     st.latex(r"\mathbf{P}_{k|k-1} = \mathbf{F}_k \mathbf{P}_{k-1|k-1} \mathbf{F}_k^T + \mathbf{Q}")
